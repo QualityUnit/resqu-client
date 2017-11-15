@@ -1,0 +1,20 @@
+### JetBrains template
+.idea/
+*.iws
+out/
+.idea_modules/
+
+### Composer template
+composer.phar
+/vendor/
+
+### Gradle template
+.gradle
+/build/
+gradle-app.setting
+!gradle-wrapper.jar
+.gradletasknamecache
+
+# # Work around https://youtrack.jetbrains.com/issue/IDEA-116898
+# gradle/wrapper/gradle-wrapper.properties
+
