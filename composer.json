@@ -1,0 +1,20 @@
+{
+    "name": "qualityunit/resqu-client",
+    "type": "library",
+    "description": "php job queue implementation using redis",
+    "keywords": ["queue", "job", "background", "redis", "resqu"],
+    "homepage": "https://github.com/QualityUnit/resqu-client",
+    "license": "MIT",
+    "require": {
+        "php": ">=5.6.0",
+        "colinmollenhour/credis": "^1.9.1"
+    },
+    "suggest": {
+        "ext-redis": "Native PHP extension for Redis connectivity. Credis will automatically utilize when available."
+    },
+    "autoload": {
+        "psr-0": {
+            "Resqu": "lib"
+        }
+    }
+}
