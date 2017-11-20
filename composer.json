@@ -13,8 +13,8 @@
         "ext-redis": "Native PHP extension for Redis connectivity. Credis will automatically utilize when available."
     },
     "autoload": {
-        "psr-0": {
-            "Resqu": "lib"
+        "psr-4": {
+            "Resqu\\": "lib"
         }
     }
 }
