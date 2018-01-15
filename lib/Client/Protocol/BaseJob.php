@@ -9,23 +9,21 @@ use Resqu\Client\JobUid;
 class BaseJob {
 
     /** @var string */
-    protected $class = null;
+    protected $class;
     /** @var array */
     protected $args = [];
     /** @var string */
-    protected $sourceId = null;
+    protected $sourceId;
     /** @var string */
-    protected $name = null;
+    protected $name;
     /** @var JobUid|null */
-    protected $uid = null;
+    protected $uid;
     /** @var boolean */
     protected $isMonitored = false;
     /** @var string */
-    protected $includePath = null;
+    protected $includePath;
     /** @var string[] */
-    protected $pathVariables = null;
-    /** @var string[] */
-    protected $environment = null;
+    protected $environment;
 
     private function __construct() {
     }
@@ -43,7 +41,6 @@ class BaseJob {
         $job->name = isset($array['name']) ? $array['name'] : $job->name;
         $job->isMonitored = isset($array['isMonitored']) ? $array['isMonitored'] : $job->isMonitored;
         $job->includePath = isset($array['includePath']) ? $array['includePath'] : $job->includePath;
-        $job->pathVariables = isset($array['pathVariables']) ? $array['pathVariables'] : $job->pathVariables;
         $job->environment = isset($array['environment']) ? $array['environment'] : $job->environment;
         $uidValid = isset($array['unique']) && is_array($array['unique']);
         $job->uid = self::uidFromArray($uidValid ? $array['unique'] : []);
@@ -65,7 +62,6 @@ class BaseJob {
         $job->uid = $jobDescriptor->getUid();
         $job->isMonitored = $jobDescriptor->isMonitored();
         $job->includePath = $jobDescriptor->getIncludePath();
-        $job->pathVariables = $jobDescriptor->getPathVariables();
         $job->environment = $jobDescriptor->getEnvironment();
 
         return $job;
@@ -123,13 +119,6 @@ class BaseJob {
     }
 
     /**
-     * @return string[]
-     */
-    public function getPathVariables() {
-        return $this->pathVariables;
-    }
-
-    /**
      * @return string
      */
     public function getSourceId() {
@@ -166,7 +155,6 @@ class BaseJob {
                 'unique' => $this->getUidArray(),
                 'isMonitored' => $this->isMonitored,
                 'includePath' => $this->includePath,
-                'pathVariables' => $this->pathVariables,
                 'environment' => $this->environment,
         ]);
     }

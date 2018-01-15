@@ -47,16 +47,20 @@ LUA;
         }
 
         if ($job->getUid()->isDeferred() && self::addDeferred($job) !== false) {
-            throw new DeferredException();
+            throw new DeferredException('Job was deferred.');
         }
 
         throw new UniqueException($job->getUniqueId());
     }
 
+    /**
+     * @param BaseJob $job
+     * @return array|bool|\Credis_Client|int|string
+     */
     public static function addDeferred(BaseJob $job) {
         $uid = $job->getUid();
-        if ($uid == null || $uid->isDeferred()) {
-            throw new Exception("Only deferrable jobs can be deferred.");
+        if ($uid === null || !$uid->isDeferred()) {
+            throw new \RuntimeException('Only deferrable jobs can be deferred.');
         }
 
         return Client::redis()->eval(

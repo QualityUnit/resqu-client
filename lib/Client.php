@@ -4,8 +4,15 @@
 namespace Resqu;
 
 use Exception;
+use Resqu\Client\Exception\DeferredException;
+use Resqu\Client\Exception\PlanExistsException;
 use Resqu\Client\Exception\UniqueException;
 use Resqu\Client\JobDescriptor;
+use Resqu\Client\Protocol\BaseJob;
+use Resqu\Client\Protocol\Key;
+use Resqu\Client\Protocol\Planner;
+use Resqu\Client\Protocol\UnassignedJob;
+use Resqu\Client\Protocol\UniqueList;
 use Resqu\Client\Redis;
 
 class Client {
@@ -13,40 +20,58 @@ class Client {
     const PROTOCOL_VERSION = 'resqu-v4';
 
     /** @var string */
-    private static $redisServer = null;
+    private static $redisServer;
     /** @var string */
-    private static $redisDatabase = null;
+    private static $redisDatabase;
     /** @var Redis */
-    private static $redis = null;
+    private static $redis;
 
     /**
      * @param JobDescriptor $job
      *
      * @return string Job ID when the job was created
+     * @throws DeferredException
      * @throws UniqueException
      */
     public static function enqueue(JobDescriptor $job) {
-        // TODO
+        $baseJob = BaseJob::fromJobDescriptor($job);
+        UniqueList::add($baseJob);
+        $unassignedJob = new UnassignedJob($baseJob, self::generateKey());
+
+        self::redis()->sAdd(Key::unassignedSet(), "{$job->getSourceId()}:{$job->getName()}");
+        self::redis()->rPush(Key::unassignedQueue($job->getSourceId(), $job->getName()), $unassignedJob->toString());
+
+        return $unassignedJob->getId();
     }
 
     /**
      * @param int $delay Number of seconds from now when the job should be executed.
      * @param JobDescriptor $job
+     *
+     * @throws DeferredException
+     * @throws UniqueException
      */
     public static function enqueueDelayed($delay, JobDescriptor $job) {
-        // TODO
+        $baseJob = BaseJob::fromJobDescriptor($job);
+        UniqueList::add($baseJob);
+
+        $enqueueAt = time() + $delay;
+        self::redis()->rPush(Key::delayed($enqueueAt), $baseJob->toString());
+        self::redis()->zAdd(Key::delayedQueueSchedule(), $enqueueAt, $enqueueAt);
     }
 
     /**
      * @param \DateTime $startDate
      * @param \DateInterval $recurrencePeriod
      * @param JobDescriptor $job
+     * @param string|null $providedId
      *
      * @return string Plan identifier
+     * @throws PlanExistsException
      */
     public static function planCreate(\DateTime $startDate, \DateInterval $recurrencePeriod,
-            JobDescriptor $job) {
-        // TODO
+        JobDescriptor $job, $providedId = null) {
+        return Planner::insertJob($startDate, $recurrencePeriod, $job, $providedId);
     }
 
     /**
@@ -84,6 +109,10 @@ class Client {
         self::$redisServer = $server;
         self::$redisDatabase = $database;
         self::resetRedis();
+    }
+
+    private static function generateKey() {
+        return uniqid(substr(md5(gethostname()), 0, 8), true);
     }
 
     private static function resetRedis() {

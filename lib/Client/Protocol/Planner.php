@@ -5,24 +5,81 @@ namespace Resqu\Client\Protocol;
 
 
 use Resqu\Client;
+use Resqu\Client\Exception\PlanExistsException;
 use Resqu\Client\JobDescriptor;
 
 class Planner {
 
+    /**
+     * KEYS [PLAN_SCHEDULE_KEY, PLAN_SCHEDULE_TIMESTAMP_KEY]
+     * ARGS [TIMESTAMP]
+     */
+    const CLEAN_TIMESTAMP_SCRIPT = /* @lang Lua */
+        <<<LUA
+if 0==redis.call('llen', KEYS[2]) then
+    redis.call('del', KEYS[2])
+    redis.call('zrem', KEYS[1], ARGV[1])
+end
+LUA;
+    /**
+     * KEYS [PLAN_KEY, PLAN_SCHEDULE_KEY, PLAN_SCHEDULE_TIMESTAMP_KEY]
+     * ARGS [PLAN_DATA, NEXT_RUN_TIMESTAMP, PLAN_ID]\
+     */
+    const INSERT_SCRIPT = /* @lang Lua */
+        <<<LUA
+if 0==redis.call('setnx', KEYS[1], ARGV[1]) then
+    return false
+end
+redis.call('zadd', KEYS[2], ARGV[2], ARGV[2])
+redis.call('rpush', KEYS[3], ARGV[3])
+return 1
+LUA;
 
+
+    /**
+     * @param $planId
+     *
+     * @return null|PlannedJob
+     */
+    public static function getPlannedJob($planId) {
+        $data = Client::redis()->get(Key::plan($planId));
+        if (!$data) {
+            return null;
+        }
+
+        $decoded = json_decode($data, true);
+        if (!is_array($decoded)) {
+            return null;
+        }
+
+        return PlannedJob::fromArray($decoded);
+    }
+
+    /**
+     * @param \DateTime $nextRun
+     * @param \DateInterval $recurrenceInterval
+     * @param JobDescriptor $job
+     * @param string $providedId custom plan id to use
+     *
+     * @return string
+     * @throws PlanExistsException
+     */
     public static function insertJob(\DateTime $nextRun, \DateInterval $recurrenceInterval,
-            JobDescriptor $job) {
-        $id = null;
+        JobDescriptor $job, $providedId = null) {
+
         do {
-            $id = microtime(true);
+            $id = $providedId ?: (string)microtime(true);
             $plannedJob = new PlannedJob($id, $nextRun, $recurrenceInterval, BaseJob::fromJobDescriptor($job));
             $plannedJob->moveAfter(time());
-        } while (!Client::redis()->setNx(Key::plan($id), $plannedJob->toString()));
 
-        $nextRun = $plannedJob->getNextRunTimestamp();
+            if (self::callInsertScript($plannedJob) !== false) {
+                break;
+            }
 
-        Client::redis()->zadd(Key::planSchedule(), $nextRun, $nextRun);
-        Client::redis()->rpush(Key::planTimestamp($nextRun), $plannedJob->getId());
+            if ($providedId !== null) {
+                throw new PlanExistsException($id);
+            }
+        } while (true);
 
         return $id;
     }
@@ -43,6 +100,25 @@ class Planner {
         return true;
     }
 
+    private static function callInsertScript(PlannedJob $plannedJob) {
+        $id = $plannedJob->getId();
+        $nextRunTimestamp = $plannedJob->getNextRunTimestamp();
+
+        return Client::redis()->eval(
+            self::INSERT_SCRIPT,
+            [
+                Key::plan($id),
+                Key::planSchedule(),
+                Key::planTimestamp($nextRunTimestamp)
+            ],
+            [
+                $plannedJob->toString(),
+                $nextRunTimestamp,
+                $id
+            ]
+        );
+    }
+
     /**
      * If there are no jobs for a given key/timestamp, delete references to it.
      * Used internally to remove empty planned: items in Redis when there are
@@ -51,30 +127,13 @@ class Planner {
      * @param int $timestamp Matching timestamp for $key.
      */
     private static function cleanupTimestamp($timestamp) {
-        $redis = Client::redis();
-
-        if ($redis->llen(Key::planTimestamp($timestamp)) == 0) {
-            $redis->del(Key::planTimestamp($timestamp));
-            $redis->zrem(Key::planSchedule(), $timestamp);
-        }
-    }
-
-    /**
-     * @param $planId
-     *
-     * @return null|PlannedJob
-     */
-    private static function getPlannedJob($planId) {
-        $data = Client::redis()->get(Key::plan($planId));
-        if (!$data) {
-            return null;
-        }
-
-        $decoded = json_decode($data, true);
-        if (!is_array($decoded)) {
-            return null;
-        }
-
-        return PlannedJob::fromArray($decoded);
+        Client::redis()->eval(
+            self::CLEAN_TIMESTAMP_SCRIPT,
+            [
+                Key::planSchedule(),
+                Key::planTimestamp($timestamp)
+            ],
+            [$timestamp]
+        );
     }
 }

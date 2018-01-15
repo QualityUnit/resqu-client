@@ -11,14 +11,14 @@ abstract class JobDescriptor {
      *
      * @return mixed[]
      */
-    abstract function getArgs();
+    abstract public function getArgs();
 
     /**
      * Task class
      *
      * @return string
      */
-    abstract function getClass();
+    abstract public function getClass();
 
     /**
      * Used to set $_SERVER environment for job
@@ -44,23 +44,14 @@ abstract class JobDescriptor {
      *
      * @return string
      */
-    abstract function getName();
-
-    /**
-     * Used to replace variables in include path
-     *
-     * @return string[]|null
-     */
-    public function getPathVariables() {
-        return null;
-    }
+    abstract public function getName();
 
     /**
      * Used to uniquely identify source of the job.
      *
      * @return string
      */
-    abstract function getSourceId();
+    abstract public function getSourceId();
 
     /**
      * Uniquely identifies job, no other job with the same ID can be enqueued while existing did

@@ -77,6 +77,19 @@ class Key {
         return self::of('unique', $uniqueId, 'state');
     }
 
+    /**
+     * @param string $sourceId
+     * @param string $jobName
+     * @return string
+     */
+    public static function unassignedQueue($sourceId, $jobName) {
+        return self::of('unassigned', $sourceId, $jobName);
+    }
+
+    public static function unassignedSet() {
+        return self::of('unassigned');
+    }
+
     private static function of(...$parts) {
         return implode(':', $parts);
     }

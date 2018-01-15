@@ -149,7 +149,7 @@ class Redis {
     /**
      * @var Credis_Client
      */
-    private $driver = null;
+    private $driver;
 
     /**
      * @var array List of all commands in Redis that supply a key as their
