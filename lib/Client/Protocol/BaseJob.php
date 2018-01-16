@@ -146,19 +146,25 @@ class BaseJob {
         return $this->isMonitored;
     }
 
+    /**
+     * @return mixed[]
+     */
     public function toArray() {
         return array_filter([
-                'class' => $this->class,
-                'args' => $this->args,
-                'sourceId' => $this->sourceId,
-                'name' => $this->name,
-                'unique' => $this->getUidArray(),
-                'isMonitored' => $this->isMonitored,
-                'includePath' => $this->includePath,
-                'environment' => $this->environment,
+            'class' => $this->class,
+            'args' => $this->args,
+            'sourceId' => $this->sourceId,
+            'name' => $this->name,
+            'unique' => $this->getUidArray(),
+            'isMonitored' => $this->isMonitored,
+            'includePath' => $this->includePath,
+            'environment' => $this->environment,
         ]);
     }
 
+    /**
+     * @return string
+     */
     public function toString() {
         return json_encode($this->toArray());
     }

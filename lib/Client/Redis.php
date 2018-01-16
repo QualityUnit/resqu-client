@@ -110,7 +110,7 @@ use Resqu\Client\Exception\RedisException;
  * @method int|Credis_Client           zCount(string $key, mixed $start, mixed $stop)
  * @method int|Credis_Client           zIncrBy(string $key, double $value, string $member)
  * @method array|Credis_Client         zRangeByScore(string $key, mixed $start, mixed $stop, array $args = null)
- * @method array|Credis_Client         zRevRangeByScore(string $key, mixed $start, mixed $stop,array $args = null)
+ * @method array|Credis_Client         zRevRangeByScore(string $key, mixed $start, mixed $stop, array $args = null)
  * @method int|Credis_Client           zRemRangeByScore(string $key, mixed $start, mixed $stop)
  * @method array|Credis_Client         zRange(string $key, mixed $start, mixed $stop, array $args = null)
  * @method array|Credis_Client         zRevRange(string $key, mixed $start, mixed $stop, array $args = null)
@@ -129,6 +129,10 @@ use Resqu\Client\Exception\RedisException;
  */
 class Redis {
     /**
+     * The default Redis Database number
+     */
+    const DEFAULT_DATABASE = 0;
+    /**
      * A default host to connect to
      */
     const DEFAULT_HOST = 'localhost';
@@ -136,10 +140,6 @@ class Redis {
      * The default Redis port
      */
     const DEFAULT_PORT = 6379;
-    /**
-     * The default Redis Database number
-     */
-    const DEFAULT_DATABASE = 0;
     /**
      * Redis namespace
      *
@@ -155,65 +155,65 @@ class Redis {
      * @var array List of all commands in Redis that supply a key as their
      *    first argument. Used to prefix keys with the Resqu namespace.
      */
-    private $keyCommands = array(
-            'exists',
-            'del',
-            'type',
-            'keys',
-            'expire',
-            'ttl',
-            'move',
-            'set',
-            'setex',
-            'get',
-            'getset',
-            'hset',
-            'hsetnx',
-            'hget',
-            'hlen',
-            'hdel',
-            'hkeys',
-            'hvals',
-            'hgetall',
-            'hexists',
-            'hincrby',
-            'hmset',
-            'hmget',
-            'setnx',
-            'incr',
-            'incrby',
-            'decr',
-            'decrby',
-            'rpush',
-            'lpush',
-            'llen',
-            'lrange',
-            'ltrim',
-            'lindex',
-            'lset',
-            'lrem',
-            'lpop',
-            'blpop',
-            'rpop',
-            'sadd',
-            'srem',
-            'spop',
-            'scard',
-            'sismember',
-            'smembers',
-            'srandmember',
-            'zadd',
-            'zrem',
-            'zrange',
-            'zrevrange',
-            'zrangebyscore',
-            'zcard',
-            'zscore',
-            'zremrangebyscore',
-            'sort',
-            'rename',
-            'rpoplpush'
-    );
+    private $keyCommands = [
+        'exists',
+        'del',
+        'type',
+        'keys',
+        'expire',
+        'ttl',
+        'move',
+        'set',
+        'setex',
+        'get',
+        'getset',
+        'hset',
+        'hsetnx',
+        'hget',
+        'hlen',
+        'hdel',
+        'hkeys',
+        'hvals',
+        'hgetall',
+        'hexists',
+        'hincrby',
+        'hmset',
+        'hmget',
+        'setnx',
+        'incr',
+        'incrby',
+        'decr',
+        'decrby',
+        'rpush',
+        'lpush',
+        'llen',
+        'lrange',
+        'ltrim',
+        'lindex',
+        'lset',
+        'lrem',
+        'lpop',
+        'blpop',
+        'rpop',
+        'sadd',
+        'srem',
+        'spop',
+        'scard',
+        'sismember',
+        'smembers',
+        'srandmember',
+        'zadd',
+        'zrem',
+        'zrange',
+        'zrevrange',
+        'zrangebyscore',
+        'zcard',
+        'zscore',
+        'zremrangebyscore',
+        'sort',
+        'rename',
+        'rpoplpush'
+    ];
 
     /**
      * @param string|array $server A DSN or array
@@ -232,7 +232,7 @@ class Redis {
             $timeout = isset($options['timeout']) ? intval($options['timeout']) : null;
             $persistent = isset($options['persistent']) ? $options['persistent'] : '';
             $maxRetries = isset($options['max_connect_retries'])
-                    ? $options['max_connect_retries'] : 0;
+                ? $options['max_connect_retries'] : 0;
 
             $this->driver = new Credis_Client($host, $port, $timeout, $persistent);
             $this->driver->setMaxConnectRetries($maxRetries);
@@ -274,22 +274,22 @@ class Redis {
             $dsn = 'redis://' . self::DEFAULT_HOST;
         }
         if (substr($dsn, 0, 7) === 'unix://') {
-            return array(
-                    $dsn,
-                    null,
-                    false,
-                    null,
-                    null,
-                    null,
-            );
+            return [
+                $dsn,
+                null,
+                false,
+                null,
+                null,
+                null,
+            ];
         }
         $parts = parse_url($dsn);
 
         // Check the URI scheme
-        $validSchemes = array('redis', 'tcp');
+        $validSchemes = ['redis', 'tcp'];
         if (isset($parts['scheme']) && !in_array($parts['scheme'], $validSchemes)) {
             throw new \InvalidArgumentException("Invalid DSN. Supported schemes are "
-                    . implode(', ', $validSchemes));
+                . implode(', ', $validSchemes));
         }
 
         // Allow simple 'hostname' format, which `parse_url` treats as a path, not host.
@@ -313,20 +313,20 @@ class Redis {
         $pass = isset($parts['pass']) ? $parts['pass'] : false;
 
         // Convert the query string into an associative array
-        $options = array();
+        $options = [];
         if (isset($parts['query'])) {
             // Parse the query string into an array
             parse_str($parts['query'], $options);
         }
 
-        return array(
-                $parts['host'],
-                $port,
-                $database,
-                $user,
-                $pass,
-                $options,
-        );
+        return [
+            $parts['host'],
+            $port,
+            $database,
+            $user,
+            $pass,
+            $options,
+        ];
     }
 
     /**

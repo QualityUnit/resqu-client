@@ -17,8 +17,7 @@ class PlannedJob {
     /** @var BaseJob */
     private $job;
 
-    public function __construct($id, \DateTime $nextRun, \DateInterval $recurrenceInterval,
-            BaseJob $job) {
+    public function __construct($id, \DateTime $nextRun, \DateInterval $recurrenceInterval, BaseJob $job) {
         $this->nextRun = clone $nextRun;
         $this->recurrenceInterval = $recurrenceInterval;
         $this->job = $job;
@@ -55,6 +54,9 @@ class PlannedJob {
         return $this->id;
     }
 
+    /**
+     * @return BaseJob
+     */
     public function getJob() {
         return $this->job;
     }
@@ -66,6 +68,9 @@ class PlannedJob {
         return $this->nextRun->getTimestamp();
     }
 
+    /**
+     * @param int $timestamp
+     */
     public function moveAfter($timestamp) {
 
         while ($this->nextRun->getTimestamp() <= $timestamp) {
@@ -73,6 +78,9 @@ class PlannedJob {
         }
     }
 
+    /**
+     * @return mixed[]
+     */
     public function toArray() {
         $array = $this->job->toArray();
         $array['id'] = $this->id;
@@ -82,6 +90,9 @@ class PlannedJob {
         return $array;
     }
 
+    /**
+     * @return string
+     */
     public function toString() {
         return json_encode($this->toArray());
     }

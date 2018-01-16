@@ -11,6 +11,7 @@ use Resqu\Client\Exception\UniqueException;
 use Resqu\Client\JobDescriptor;
 use Resqu\Client\Protocol\BaseJob;
 use Resqu\Client\Protocol\Key;
+use Resqu\Client\Protocol\PlannedJob;
 use Resqu\Client\Protocol\Planner;
 use Resqu\Client\Protocol\UnassignedJob;
 use Resqu\Client\Protocol\UniqueList;
@@ -86,6 +87,16 @@ class Client {
      */
     public static function planRemove($id) {
         return Planner::removeJob($id);
+    }
+
+    /**
+     * @param string $id
+     *
+     * @return null|PlannedJob
+     * @throws RedisException
+     */
+    public static function planGet($id) {
+        return Planner::getPlannedJob($id);
     }
 
     /**

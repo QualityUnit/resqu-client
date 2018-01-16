@@ -55,6 +55,7 @@ LUA;
             Log::error('Failed to parse planned job.', [
                 'payload' => $data
             ]);
+
             return null;
         }
 

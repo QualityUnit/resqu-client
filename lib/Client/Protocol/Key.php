@@ -53,17 +53,10 @@ class Key {
         return self::of('plan_schedule', $timestamp);
     }
 
-    public static function uniqueDeferred($uniqueId) {
-        return self::of('unique', $uniqueId, 'deferred');
-    }
-
-    public static function uniqueState($uniqueId) {
-        return self::of('unique', $uniqueId, 'state');
-    }
-
     /**
      * @param string $sourceId
      * @param string $jobName
+     *
      * @return string
      */
     public static function unassignedQueue($sourceId, $jobName) {
@@ -72,6 +65,14 @@ class Key {
 
     public static function unassignedSet() {
         return self::of('unassigned');
+    }
+
+    public static function uniqueDeferred($uniqueId) {
+        return self::of('unique', $uniqueId, 'deferred');
+    }
+
+    public static function uniqueState($uniqueId) {
+        return self::of('unique', $uniqueId, 'state');
     }
 
     private static function of(...$parts) {
