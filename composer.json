@@ -7,7 +7,8 @@
     "license": "MIT",
     "require": {
         "php": ">=5.6.0",
-        "colinmollenhour/credis": "^1.9.1"
+        "colinmollenhour/credis": "^1.9.1",
+        "psr/log": "^1.0.2"
     },
     "suggest": {
         "ext-redis": "Native PHP extension for Redis connectivity. Credis will automatically utilize when available."

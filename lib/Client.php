@@ -6,6 +6,7 @@ namespace Resqu;
 use Exception;
 use Resqu\Client\Exception\DeferredException;
 use Resqu\Client\Exception\PlanExistsException;
+use Resqu\Client\Exception\RedisException;
 use Resqu\Client\Exception\UniqueException;
 use Resqu\Client\JobDescriptor;
 use Resqu\Client\Protocol\BaseJob;
@@ -32,6 +33,7 @@ class Client {
      * @return string Job ID when the job was created
      * @throws DeferredException
      * @throws UniqueException
+     * @throws RedisException
      */
     public static function enqueue(JobDescriptor $job) {
         $baseJob = BaseJob::fromJobDescriptor($job);
@@ -50,6 +52,7 @@ class Client {
      *
      * @throws DeferredException
      * @throws UniqueException
+     * @throws RedisException
      */
     public static function enqueueDelayed($delay, JobDescriptor $job) {
         $baseJob = BaseJob::fromJobDescriptor($job);
@@ -68,6 +71,7 @@ class Client {
      *
      * @return string Plan identifier
      * @throws PlanExistsException
+     * @throws RedisException
      */
     public static function planCreate(\DateTime $startDate, \DateInterval $recurrencePeriod,
         JobDescriptor $job, $providedId = null) {
@@ -78,13 +82,15 @@ class Client {
      * @param string $id Plan identifier
      *
      * @return boolean
+     * @throws RedisException
      */
     public static function planRemove($id) {
-        // TODO
+        return Planner::removeJob($id);
     }
 
     /**
      * @return Redis
+     * @throws RedisException
      */
     public static function redis() {
         if (self::$redis !== null) {

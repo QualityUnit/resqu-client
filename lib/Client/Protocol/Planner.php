@@ -6,7 +6,9 @@ namespace Resqu\Client\Protocol;
 
 use Resqu\Client;
 use Resqu\Client\Exception\PlanExistsException;
+use Resqu\Client\Exception\RedisException;
 use Resqu\Client\JobDescriptor;
+use Resqu\Client\Log;
 
 class Planner {
 
@@ -40,6 +42,7 @@ LUA;
      * @param $planId
      *
      * @return null|PlannedJob
+     * @throws RedisException
      */
     public static function getPlannedJob($planId) {
         $data = Client::redis()->get(Key::plan($planId));
@@ -49,10 +52,22 @@ LUA;
 
         $decoded = json_decode($data, true);
         if (!is_array($decoded)) {
+            Log::error('Failed to parse planned job.', [
+                'payload' => $data
+            ]);
             return null;
         }
 
-        return PlannedJob::fromArray($decoded);
+        try {
+            return PlannedJob::fromArray($decoded);
+        } catch (\Exception $e) {
+            Log::error('Failed to instantiate planned job.', [
+                'exception' => $e,
+                'payload' => $data
+            ]);
+        }
+
+        return null;
     }
 
     /**
@@ -63,6 +78,7 @@ LUA;
      *
      * @return string
      * @throws PlanExistsException
+     * @throws RedisException
      */
     public static function insertJob(\DateTime $nextRun, \DateInterval $recurrenceInterval,
         JobDescriptor $job, $providedId = null) {
@@ -84,6 +100,12 @@ LUA;
         return $id;
     }
 
+    /**
+     * @param $id
+     *
+     * @return bool
+     * @throws RedisException
+     */
     public static function removeJob($id) {
         $plannedJob = self::getPlannedJob($id);
         Client::redis()->del(Key::plan($id));
@@ -100,6 +122,12 @@ LUA;
         return true;
     }
 
+    /**
+     * @param PlannedJob $plannedJob
+     *
+     * @return bool|int
+     * @throws RedisException
+     */
     private static function callInsertScript(PlannedJob $plannedJob) {
         $id = $plannedJob->getId();
         $nextRunTimestamp = $plannedJob->getNextRunTimestamp();
@@ -125,6 +153,8 @@ LUA;
      * no more jobs left to run at that timestamp.
      *
      * @param int $timestamp Matching timestamp for $key.
+     *
+     * @throws RedisException
      */
     private static function cleanupTimestamp($timestamp) {
         Client::redis()->eval(

@@ -53,22 +53,6 @@ class Key {
         return self::of('plan_schedule', $timestamp);
     }
 
-    /**
-     * @param string $name
-     *
-     * @return string
-     */
-    public static function queue($name) {
-        return Key::of('queue', $name);
-    }
-
-    /**
-     * @return string
-     */
-    public static function queues() {
-        return 'queues';
-    }
-
     public static function uniqueDeferred($uniqueId) {
         return self::of('unique', $uniqueId, 'deferred');
     }

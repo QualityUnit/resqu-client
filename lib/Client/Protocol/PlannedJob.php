@@ -25,6 +25,12 @@ class PlannedJob {
         $this->id = $id;
     }
 
+    /**
+     * @param array $array
+     *
+     * @return PlannedJob
+     * @throws \Exception
+     */
     public static function fromArray(array $array) {
         $job = BaseJob::fromArray($array);
 
@@ -36,6 +42,7 @@ class PlannedJob {
 
     /**
      * @return PlannedJob
+     * @throws \Exception
      */
     public function copy() {
         return self::fromArray($this->toArray());
