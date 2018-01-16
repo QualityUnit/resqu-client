@@ -10,6 +10,7 @@ use Resqu\Client\Exception\RedisException;
 use Resqu\Client\Exception\UniqueException;
 use Resqu\Client\JobDescriptor;
 use Resqu\Client\Protocol\BaseJob;
+use Resqu\Client\Protocol\Batch;
 use Resqu\Client\Protocol\Key;
 use Resqu\Client\Protocol\PlannedJob;
 use Resqu\Client\Protocol\Planner;
@@ -29,6 +30,16 @@ class Client {
     private static $redis;
 
     /**
+     * @param int $timeToLive time since last push in seconds
+     *
+     * @return Batch
+     * @throws RedisException
+     */
+    public static function createBatch($timeToLive) {
+        return new Batch(self::redis(), $timeToLive);
+    }
+
+    /**
      * @param JobDescriptor $job
      *
      * @return string Job ID when the job was created
@@ -39,7 +50,7 @@ class Client {
     public static function enqueue(JobDescriptor $job) {
         $baseJob = BaseJob::fromJobDescriptor($job);
         UniqueList::add($baseJob);
-        $unassignedJob = new UnassignedJob($baseJob, self::generateKey());
+        $unassignedJob = new UnassignedJob($baseJob);
 
         self::redis()->sAdd(Key::unassignedSet(), "{$job->getSourceId()}:{$job->getName()}");
         self::redis()->rPush(Key::unassignedQueue($job->getSourceId(), $job->getName()), $unassignedJob->toString());
@@ -80,16 +91,6 @@ class Client {
     }
 
     /**
-     * @param string $id Plan identifier
-     *
-     * @return boolean
-     * @throws RedisException
-     */
-    public static function planRemove($id) {
-        return Planner::removeJob($id);
-    }
-
-    /**
      * @param string $id
      *
      * @return null|PlannedJob
@@ -97,6 +98,16 @@ class Client {
      */
     public static function planGet($id) {
         return Planner::getPlannedJob($id);
+    }
+
+    /**
+     * @param string $id Plan identifier
+     *
+     * @return boolean
+     * @throws RedisException
+     */
+    public static function planRemove($id) {
+        return Planner::removeJob($id);
     }
 
     /**
@@ -126,10 +137,6 @@ class Client {
         self::$redisServer = $server;
         self::$redisDatabase = $database;
         self::resetRedis();
-    }
-
-    private static function generateKey() {
-        return uniqid(substr(md5(gethostname()), 0, 8), true);
     }
 
     private static function resetRedis() {

@@ -15,17 +15,17 @@ class UnassignedJob {
 
     /**
      * @param BaseJob $job
-     * @param string $id
      */
-    public function __construct(BaseJob $job, $id) {
+    public function __construct(BaseJob $job) {
         $this->job = $job;
-        $this->id = $id;
+        $this->id = $this->generateKey();
         $this->queuedTime = microtime(true);
     }
 
     public static function fromArray(array $array) {
         $job = BaseJob::fromArray($array);
-        $queuedJob = new self($job, $array['id']);
+        $queuedJob = new self($job);
+        $queuedJob->id = $array['id'];
         $queuedJob->queuedTime = $array['queue_time'];
 
         return $queuedJob;
@@ -62,5 +62,9 @@ class UnassignedJob {
 
     public function toString() {
         return json_encode($this->toArray());
+    }
+
+    private function generateKey() {
+        return uniqid(substr(md5(gethostname()), 0, 8), true);
     }
 }

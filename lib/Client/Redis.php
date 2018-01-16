@@ -145,7 +145,7 @@ class Redis {
      *
      * @var string
      */
-    private static $defaultNamespace = Client::PROTOCOL_VERSION;
+    private static $defaultNamespace = Client::PROTOCOL_VERSION . ':';
     /**
      * @var Credis_Client
      */
@@ -185,6 +185,7 @@ class Redis {
         'decr',
         'decrby',
         'rpush',
+        'rpushx',
         'lpush',
         'llen',
         'lrange',
@@ -212,6 +213,7 @@ class Redis {
         'zremrangebyscore',
         'sort',
         'rename',
+        'renamenx',
         'rpoplpush'
     ];
 
