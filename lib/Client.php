@@ -52,8 +52,7 @@ class Client {
         UniqueList::add($baseJob);
         $unassignedJob = new UnassignedJob($baseJob);
 
-        self::redis()->sAdd(Key::unassignedSet(), "{$job->getSourceId()}:{$job->getName()}");
-        self::redis()->rPush(Key::unassignedQueue($job->getSourceId(), $job->getName()), $unassignedJob->toString());
+        self::redis()->lPush(Key::unassignedQueue(), $unassignedJob->toString());
 
         return $unassignedJob->getId();
     }

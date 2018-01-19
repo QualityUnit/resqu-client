@@ -73,16 +73,9 @@ class Key {
     }
 
     /**
-     * @param string $sourceId
-     * @param string $jobName
-     *
      * @return string
      */
-    public static function unassignedQueue($sourceId, $jobName) {
-        return self::of('unassigned', $sourceId, $jobName);
-    }
-
-    public static function unassignedSet() {
+    public static function unassignedQueue() {
         return self::of('unassigned');
     }
 
