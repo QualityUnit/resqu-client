@@ -65,13 +65,4 @@ abstract class JobDescriptor {
     public function getUid() {
         return null;
     }
-
-    /**
-     * Turns on job tracking for 24h.
-     *
-     * @return bool TRUE to track; otherwise FALSE
-     */
-    public function isMonitored() {
-        return false;
-    }
 }

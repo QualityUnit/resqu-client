@@ -18,8 +18,6 @@ class BaseJob {
     protected $name;
     /** @var JobUid|null */
     protected $uid;
-    /** @var boolean */
-    protected $isMonitored = false;
     /** @var string */
     protected $includePath;
     /** @var string[] */
@@ -39,7 +37,6 @@ class BaseJob {
         $job->args = isset($array['args']) ? $array['args'] : $job->args;
         $job->sourceId = isset($array['sourceId']) ? $array['sourceId'] : $job->sourceId;
         $job->name = isset($array['name']) ? $array['name'] : $job->name;
-        $job->isMonitored = isset($array['isMonitored']) ? $array['isMonitored'] : $job->isMonitored;
         $job->includePath = isset($array['includePath']) ? $array['includePath'] : $job->includePath;
         $job->environment = isset($array['environment']) ? $array['environment'] : $job->environment;
         $uidValid = isset($array['unique']) && is_array($array['unique']);
@@ -60,7 +57,6 @@ class BaseJob {
         $job->sourceId = $jobDescriptor->getSourceId();
         $job->name = $jobDescriptor->getName();
         $job->uid = $jobDescriptor->getUid();
-        $job->isMonitored = $jobDescriptor->isMonitored();
         $job->includePath = $jobDescriptor->getIncludePath();
         $job->environment = $jobDescriptor->getEnvironment();
 
@@ -140,13 +136,6 @@ class BaseJob {
     }
 
     /**
-     * @return boolean
-     */
-    public function isMonitored() {
-        return $this->isMonitored;
-    }
-
-    /**
      * @return mixed[]
      */
     public function toArray() {
@@ -156,7 +145,6 @@ class BaseJob {
             'sourceId' => $this->sourceId,
             'name' => $this->name,
             'unique' => $this->getUidArray(),
-            'isMonitored' => $this->isMonitored,
             'includePath' => $this->includePath,
             'environment' => $this->environment,
         ]);
