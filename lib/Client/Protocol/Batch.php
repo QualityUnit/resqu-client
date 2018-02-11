@@ -61,11 +61,13 @@ LUA;
         if ($this->uncommittedKey === null) {
             throw new BatchCommitException("Can't commit empty batch.");
         }
-        if (false === $this->redis->eval(self::SCRIPT_COMMIT_BATCH, [
+        if (
+            false === $this->redis->eval(self::SCRIPT_COMMIT_BATCH, [
                 Key::batchCommittedList(),
                 $this->committedKey,
                 $this->uncommittedKey
-            ])) {
+            ])
+        ) {
             throw new BatchCommitException('Batch commit failed.');
         }
 

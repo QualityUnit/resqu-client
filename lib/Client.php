@@ -25,8 +25,6 @@ class Client {
 
     /** @var string */
     private static $redisServer;
-    /** @var string */
-    private static $redisDatabase;
     /** @var Redis */
     private static $redis;
 
@@ -119,7 +117,7 @@ class Client {
             return self::$redis;
         }
 
-        self::$redis = new Redis(self::$redisServer, self::$redisDatabase);
+        self::$redis = new Redis(self::$redisServer);
 
         return self::$redis;
     }
@@ -131,11 +129,9 @@ class Client {
      * @param string|mixed[] $server Host/port combination separated by a colon,
      *                      or DSN-formatted URI,
      *                      or a nested array of servers with host/port pairs.
-     * @param int $database
      */
-    public static function setBackend($server, $database = 0) {
+    public static function setBackend($server) {
         self::$redisServer = $server;
-        self::$redisDatabase = $database;
         self::resetRedis();
     }
 

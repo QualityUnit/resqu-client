@@ -10,7 +10,7 @@ use Resqu\Client\Exception\RedisException;
 /**
  * Wrap Credis to add namespace support and various helper methods.
  *
- * @package        Resqu/Redis
+ * @package        Resque\Resque/Redis
  * @author        Chris Boulton <chris@bigcommerce.com>
  * @license        http://www.opensource.org/licenses/mit-license.php
  * COPIED FROM CREDIS CLIENT PHPDOC
@@ -119,19 +119,17 @@ use Resqu\Client\Exception\RedisException;
  * @method int|Credis_Client           zRem(string $key, string $member)
  * @method int|Credis_Client           zDelete(string $key, string $member)
  * Pub/Sub
- * @method int|Credis_Client          publish(string $channel, string $message)
+ * @method int |Credis_Client          publish(string $channel, string $message)
  * @method int|array|Credis_Client     pubsub(string $subCommand, $arg = null)
  * Scripting:
  * @method string|int|Credis_Client    script(string $command, string $arg1 = null)
  * @method string|int|array|bool|Credis_Client eval(string $script, array $keys = null, array $args = null)
- * @method string|int|array|bool|Credis_Client evalSha(string $script, array $keys = null, array $args = null) Special:
+ * @method string|int|array|bool|Credis_Client evalSha(string $script, array $keys = null, array $args = null)
+ * Special:
  * @method string        quit()
  */
 class Redis {
-    /**
-     * The default Redis Database number
-     */
-    const DEFAULT_DATABASE = 0;
+
     /**
      * A default host to connect to
      */
@@ -140,6 +138,7 @@ class Redis {
      * The default Redis port
      */
     const DEFAULT_PORT = 6379;
+    const MAX_CALL_RETRY_SECONDS = 1;
     /**
      * Redis namespace
      *
@@ -149,111 +148,103 @@ class Redis {
     /**
      * @var Credis_Client
      */
-    private $driver;
+    protected $driver;
 
     /**
      * @var array List of all commands in Redis that supply a key as their
-     *    first argument. Used to prefix keys with the Resqu namespace.
+     *    first argument. Used to prefix keys with the Resque\Resque namespace.
      */
     private $keyCommands = [
-        'exists',
-        'del',
-        'type',
-        'keys',
-        'expire',
-        'ttl',
-        'move',
-        'set',
-        'setex',
-        'get',
-        'getset',
-        'hset',
-        'hsetnx',
-        'hget',
-        'hlen',
-        'hdel',
-        'hkeys',
-        'hvals',
-        'hgetall',
-        'hexists',
-        'hincrby',
-        'hmset',
-        'hmget',
-        'setnx',
-        'incr',
-        'incrby',
-        'decr',
-        'decrby',
-        'rpush',
-        'rpushx',
-        'lpush',
-        'llen',
-        'lrange',
-        'ltrim',
-        'lindex',
-        'lset',
-        'lrem',
-        'lpop',
-        'blpop',
-        'rpop',
-        'sadd',
-        'srem',
-        'spop',
-        'scard',
-        'sismember',
-        'smembers',
-        'srandmember',
-        'zadd',
-        'zrem',
-        'zrange',
-        'zrevrange',
-        'zrangebyscore',
-        'zcard',
-        'zscore',
-        'zremrangebyscore',
-        'sort',
-        'rename',
-        'renamenx',
-        'rpoplpush'
+        'exists' => [0, 1, 2, 3, 4],
+        'del' => [0, 1, 2, 3, 4],
+        'type' => [0],
+        'keys' => [0],
+        'expire' => [0],
+        'ttl' => [0],
+        'move' => [0],
+        'set' => [0],
+        'setex' => [0],
+        'get' => [0],
+        'mget' => [0],
+        'getset' => [0],
+        'hset' => [0],
+        'hsetnx' => [0],
+        'hget' => [0],
+        'hlen' => [0],
+        'hdel' => [0],
+        'hkeys' => [0],
+        'hvals' => [0],
+        'hgetall' => [0],
+        'hexists' => [0],
+        'hincrby' => [0],
+        'hmset' => [0],
+        'hmget' => [0],
+        'setnx' => [0],
+        'incr' => [0],
+        'incrby' => [0],
+        'decr' => [0],
+        'decrby' => [0],
+        'rpush' => [0],
+        'lpush' => [0],
+        'llen' => [0],
+        'lrange' => [0],
+        'ltrim' => [0],
+        'lindex' => [0],
+        'lset' => [0],
+        'lrem' => [0],
+        'lpop' => [0],
+        'blpop' => [0],
+        'rpop' => [0],
+        'sadd' => [0],
+        'srem' => [0],
+        'spop' => [0],
+        'scard' => [0],
+        'sismember' => [0],
+        'smembers' => [0],
+        'srandmember' => [0],
+        'sunion' => [0, 1, 2, 3, 4],
+        'sinter' => [0, 1, 2, 3, 4],
+        'sdiff' => [0, 1, 2, 3, 4],
+        'sunionstore' => [0, 1, 2, 3, 4],
+        'sinterstore' => [0, 1, 2, 3, 4],
+        'sdiffstore' => [0, 1, 2, 3, 4],
+        'zadd' => [0],
+        'zincrby' => [0],
+        'zrem' => [0],
+        'zrange' => [0],
+        'zrevrange' => [0],
+        'zrangebyscore' => [0],
+        'zcard' => [0],
+        'zscore' => [0],
+        'zremrangebyscore' => [0],
+        'sort' => [0],
+        'rename' => [0, 1],
+        'renamenx' => [0, 1],
+        'rpoplpush' => [0, 1],
+        'brpoplpush' => [0, 1],
+        'eval' => [1],
+        'evalsha' => [1]
     ];
+
+    private $redisServer;
 
     /**
      * @param string|array $server A DSN or array
-     * @param int $database A database number to select. However, if we find a valid database number
      * in the DSN the DSN-supplied value will be used instead and this parameter is ignored.
      *
      * @throws RedisException
      */
-    public function __construct($server, $database = null) {
+    public function __construct($server) {
         try {
-            /** @noinspection PhpUnusedLocalVariableInspection */
-            list($host, $port, $dsnDatabase, $user, $password, $options) = self::parseDsn($server);
-            // $user is not used, only $password
-
-            // Look for known Credis_Client options
-            $timeout = isset($options['timeout']) ? intval($options['timeout']) : null;
-            $persistent = isset($options['persistent']) ? $options['persistent'] : '';
-            $maxRetries = isset($options['max_connect_retries'])
-                ? $options['max_connect_retries'] : 0;
-
-            $this->driver = new Credis_Client($host, $port, $timeout, $persistent);
-            $this->driver->setMaxConnectRetries($maxRetries);
-            if ($password) {
-                $this->driver->auth($password);
-            }
-
-            // If we have found a database in our DSN, use it instead of the `$database`
-            // value passed into the constructor.
-            if ($dsnDatabase !== false) {
-                $database = $dsnDatabase;
-            }
-
-            if ($database !== null) {
-                $this->driver->select($database);
-            }
-        } catch (CredisException $e) {
-            throw new RedisException('Error communicating with Redis: ' . $e->getMessage(), 0, $e);
+            $this->redisServer = $server;
+            $this->createDriver();
+        } catch (\Exception $e) {
+            throw new RedisException('Redis driver creation failed: ' . $e->getMessage(), 0, $e);
         }
+    }
+
+    public static function getPrefix() {
+        return self::$defaultNamespace;
     }
 
     /**
@@ -266,8 +257,7 @@ class Redis {
      *
      * @param string $dsn A DSN string
      *
-     * @return array An array of DSN compotnents, with 'false' values for any unknown components.
-     *         e.g.
+     * @return array An array of DSN compotnents, with 'false' values for any unknown components. e.g.
      *               [host, port, db, user, pass, options]
      */
     public static function parseDsn($dsn) {
@@ -290,7 +280,7 @@ class Redis {
         // Check the URI scheme
         $validSchemes = ['redis', 'tcp'];
         if (isset($parts['scheme']) && !in_array($parts['scheme'], $validSchemes)) {
-            throw new \InvalidArgumentException("Invalid DSN. Supported schemes are "
+            throw new \InvalidArgumentException('Invalid DSN. Supported schemes are '
                 . implode(', ', $validSchemes));
         }
 
@@ -332,6 +322,28 @@ class Redis {
     }
 
     /**
+     * Set Redis namespace (prefix) default: resque
+     *
+     * @param string $namespace
+     */
+    public static function prefix($namespace) {
+        if (substr($namespace, -1) !== ':' && $namespace != '') {
+            $namespace .= ':';
+        }
+        self::$defaultNamespace = $namespace;
+    }
+
+    public static function removePrefix($string) {
+        $prefix = self::getPrefix();
+
+        if (substr($string, 0, strlen($prefix)) == $prefix) {
+            $string = substr($string, strlen($prefix), strlen($string));
+        }
+
+        return $string;
+    }
+
+    /**
      * Magic method to handle all function requests and prefix key based
      * operations with the {self::$defaultNamespace} key prefix.
      *
@@ -342,23 +354,124 @@ class Redis {
      * @throws RedisException
      */
     public function __call($name, $args) {
-        if (in_array(strtolower($name), $this->keyCommands)) {
-            if (is_array($args[0])) {
-                foreach ($args[0] AS $i => $v) {
-                    $args[0][$i] = self::$defaultNamespace . $v;
+        $lowerName = strtolower($name);
+        if (array_key_exists($lowerName, $this->keyCommands)) {
+            $indexes = $this->keyCommands[$lowerName];
+            foreach ($args as $index => $value) {
+                if (!in_array($index, $indexes, true)) {
+                    continue;
                 }
-            } else {
-                $args[0] = self::$defaultNamespace . $args[0];
+                if (is_array($value)) {
+                    $args[$index] = $this->prefixKeys($value);
+                } else {
+                    $args[$index] = $this->prefixKey($value);
+                }
             }
         }
         try {
             return $this->driver->__call($name, $args);
         } catch (CredisException $e) {
-            throw new RedisException('Error communicating with Redis: ' . $e->getMessage(), 0, $e);
+            return $this->attemptCallRetry($e, $name, $args);
         }
     }
 
     public function close() {
         $this->driver->close();
+    }
+
+    protected function createDriver() {
+        /** @noinspection PhpUnusedLocalVariableInspection */
+        list($host, $port, $dsnDatabase, $user, $password, $options) = self::parseDsn($this->redisServer);
+        // $user is not used, only $password
+
+        // Look for known Credis_Client options
+        $timeout = isset($options['timeout']) ? intval($options['timeout']) : null;
+        $persistent = isset($options['persistent']) ? $options['persistent'] : '';
+        $maxRetries = isset($options['max_connect_retries'])
+            ? $options['max_connect_retries'] : 0;
+
+        $this->driver = new Credis_Client($host, $port, $timeout, $persistent);
+        $this->driver->setMaxConnectRetries($maxRetries);
+    }
+
+    /**
+     * @param CredisException $e
+     * @param $name
+     * @param $args
+     * @param float $wait time to wait in seconds
+     *
+     * @return mixed
+     * @throws RedisException
+     */
+    private function attemptCallRetry(CredisException $e, $name, $args, $wait = 0.5) {
+        if (!$this->isAbleToRetry($e) || $wait >= self::MAX_CALL_RETRY_SECONDS) {
+            Log::critical('Redis call failed.', [
+                'exception' => $e,
+                'name' => $name,
+                'args' => $args
+            ]);
+
+            throw new RedisException("Error communicating with Redis: {$e->getMessage()}", 0, $e);
+        }
+        $this->close();
+
+        usleep($wait * 1000000);
+
+        try {
+            return $this->driver->__call($name, $args);
+        } catch (CredisException $e) {
+            if ($wait < 60 && $wait * 2 >= 60) {
+                Log::error('Waiting for redis.', [
+                    'exception' => $e,
+                    'name' => $name,
+                    'args' => $args
+                ]);
+            }
+
+            return $this->attemptCallRetry($e, $name, $args, max(2 * $wait, 60));
+        }
+    }
+
+    /**
+     * @param CredisException $e
+     *
+     * @return bool
+     */
+    private function isAbleToRetry(CredisException $e) {
+        $isInReadOnlyMode = 0 === stripos($e->getMessage(), 'READONLY');
+
+        $connectFailed = 0 === strpos($e->getMessage(), 'Connection to Redis');
+
+        return
+            $isInReadOnlyMode
+            || $connectFailed
+            || in_array($e->getCode(),
+                [
+                    CredisException::CODE_DISCONNECTED,
+                    CredisException::CODE_TIMED_OUT
+                ], true);
+    }
+
+    /**
+     * @param string $key
+     *
+     * @return string
+     */
+    private function prefixKey($key) {
+        return self::$defaultNamespace . $key;
+    }
+
+    /**
+     * @param string[] $keyArray
+     *
+     * @return string[]
+     */
+    private function prefixKeys(array $keyArray) {
+        $prefixedKeys = [];
+        foreach ($keyArray as $key) {
+            $prefixedKeys[] = $this->prefixKey($key);
+        }
+
+        return $prefixedKeys;
     }
 }

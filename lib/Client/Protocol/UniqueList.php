@@ -74,8 +74,8 @@ LUA;
         return Client::redis()->eval(
             self::SCRIPT_ADD_DEFERRED,
             [
-                Client::PROTOCOL_VERSION . Key::uniqueState($uid->getId()),
-                Client::PROTOCOL_VERSION . Key::uniqueDeferred($uid->getId())
+                Key::uniqueState($uid->getId()),
+                Key::uniqueDeferred($uid->getId())
             ],
             [
                 self::STATE_RUNNING,
