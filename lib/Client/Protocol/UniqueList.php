@@ -34,18 +34,18 @@ LUA;
 
     /**
      * @param BaseJob $job job to create unique record for
-     * @param bool $ignoreFail if true, ignore already existing unique record
      *
      * @throws DeferredException if job was deferred and should not be queued
      * @throws UniqueException if adding wasn't successful and job could not be deferred
      * @throws RedisException
      */
-    public static function add(BaseJob $job, $ignoreFail = false) {
+    public static function add(BaseJob $job) {
         $uniqueId = $job->getUniqueId();
 
-        if (!$uniqueId
+        if (
+            !$uniqueId
             || Client::redis()->setNx(Key::uniqueState($uniqueId), self::STATE_QUEUED)
-            || $ignoreFail) {
+        ) {
             return;
         }
 
