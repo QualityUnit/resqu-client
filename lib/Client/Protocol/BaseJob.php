@@ -30,8 +30,13 @@ class BaseJob {
      * @param array $array
      *
      * @return self
+     * @throws \InvalidArgumentException
      */
     public static function fromArray(array $array) {
+        if (!isset($array['class'], $array['sourceId'], $array['name'])) {
+            throw new \InvalidArgumentException('Mandatory Job parameters missing');
+        }
+
         $job = new self();
         $job->class = isset($array['class']) ? $array['class'] : $job->class;
         $job->args = isset($array['args']) ? $array['args'] : $job->args;
@@ -40,7 +45,7 @@ class BaseJob {
         $job->includePath = isset($array['includePath']) ? $array['includePath'] : $job->includePath;
         $job->environment = isset($array['environment']) ? $array['environment'] : $job->environment;
         $uidValid = isset($array['unique']) && is_array($array['unique']);
-        $job->uid = self::uidFromArray($uidValid ? $array['unique'] : []);
+        $job->uid = JobUid::fromArray($uidValid ? $array['unique'] : []);
 
         return $job;
     }
@@ -61,22 +66,6 @@ class BaseJob {
         $job->environment = $jobDescriptor->getEnvironment();
 
         return $job;
-    }
-
-
-    /**
-     * @param mixed[] $array
-     *
-     * @return JobUid|null
-     */
-    private static function uidFromArray(array $array) {
-        if (!isset($array['uid'])) {
-            return null;
-        }
-
-        $deferralDelay = isset($array['deferrableBy']) ? $array['deferrableBy'] : null;
-
-        return new JobUid($array['uid'], $deferralDelay);
     }
 
     /**
@@ -132,7 +121,7 @@ class BaseJob {
      * @return null|string
      */
     public function getUniqueId() {
-        return $this->uid === null ? null : $this->uid->getId();
+        return $this->uid !== null ? $this->uid->getId() : null;
     }
 
     /**
@@ -141,10 +130,10 @@ class BaseJob {
     public function toArray() {
         return array_filter([
             'class' => $this->class,
-            'args' => $this->args,
             'sourceId' => $this->sourceId,
             'name' => $this->name,
-            'unique' => $this->getUidArray(),
+            'args' => $this->args,
+            'unique' => $this->uid === null ? null : $this->uid->toArray(),
             'includePath' => $this->includePath,
             'environment' => $this->environment,
         ]);
@@ -155,21 +144,5 @@ class BaseJob {
      */
     public function toString() {
         return json_encode($this->toArray());
-    }
-
-    /**
-     * @return mixed[]|null
-     */
-    private function getUidArray() {
-        if ($this->uid === null) {
-            return null;
-        }
-
-        $result = ['uid' => $this->uid->getId()];
-        if ($this->uid->isDeferred()) {
-            $result['deferrableBy'] = $this->uid->getDeferralDelay();
-        }
-
-        return $result;
     }
 }

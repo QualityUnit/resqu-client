@@ -25,6 +25,21 @@ class JobUid {
     }
 
     /**
+     * @param mixed[] $array
+     *
+     * @return JobUid|null
+     */
+    public static function fromArray(array $array) {
+        if (!isset($array['uid'])) {
+            return null;
+        }
+
+        $deferralDelay = isset($array['deferrableBy']) ? $array['deferrableBy'] : null;
+
+        return new self($array['uid'], $deferralDelay);
+    }
+
+    /**
      * @return int seconds
      */
     public function getDeferralDelay() {
@@ -43,5 +58,19 @@ class JobUid {
      */
     public function isDeferred() {
         return $this->isDeferred;
+    }
+
+    /**
+     * @return mixed[]
+     */
+    public function toArray() {
+        $result = [
+            'uid' => $this->id
+        ];
+        if ($this->isDeferred) {
+            $result['deferrableBy'] = $this->deferralDelay;
+        }
+
+        return $result;
     }
 }
