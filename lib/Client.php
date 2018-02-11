@@ -11,6 +11,7 @@ use Resqu\Client\Exception\UniqueException;
 use Resqu\Client\JobDescriptor;
 use Resqu\Client\Protocol\BaseJob;
 use Resqu\Client\Protocol\Batch;
+use Resqu\Client\Protocol\ExceptionThrower;
 use Resqu\Client\Protocol\Key;
 use Resqu\Client\Protocol\PlannedJob;
 use Resqu\Client\Protocol\Planner;
@@ -136,6 +137,13 @@ class Client {
         self::$redisServer = $server;
         self::$redisDatabase = $database;
         self::resetRedis();
+    }
+
+    /**
+     * @return ExceptionThrower
+     */
+    public static function throwException() {
+        return new ExceptionThrower();
     }
 
     private static function resetRedis() {
