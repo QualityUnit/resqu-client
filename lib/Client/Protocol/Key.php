@@ -7,22 +7,25 @@ namespace Resqu\Client\Protocol;
 class Key {
 
     /**
-     * @param string $sourceId
-     * @param string $jobName
-     * @param string $suffix
+     * @param string $batchId
      *
      * @return string
      */
-    public static function batchUncommitted($sourceId, $jobName, $suffix) {
-        return self::of('uncommitted', $sourceId, $jobName, $suffix);
+    public static function batchCommitted($batchId) {
+        return self::of('committed', $batchId);
     }
 
-    public static function batchCommittedSet() {
+    public static function batchCommittedList() {
         return self::of('committed');
     }
 
-    public static function batchCommitted($sourceId, $jobName, $suffix) {
-        return self::of('committed', $sourceId, $jobName, $suffix);
+    /**
+     * @param string $batchId
+     *
+     * @return string
+     */
+    public static function batchUncommitted($batchId) {
+        return self::of('uncommitted', $batchId);
     }
 
     /**

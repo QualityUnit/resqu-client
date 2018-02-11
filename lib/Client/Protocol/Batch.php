@@ -11,14 +11,15 @@ use Resqu\Client\Redis;
 class Batch {
 
     /**
-     * KEYS [COMMITTED_SET_KEY, COMMITTED_BATCH_KEY, UNCOMMITTED_BATCH_KEY]
+     * KEYS [COMMITTED_LIST_KEY, COMMITTED_BATCH_KEY, UNCOMMITTED_BATCH_KEY]
+     * ARGS [BATCH_ID]
      */
     const SCRIPT_COMMIT_BATCH = /** @lang Lua */
         <<<LUA
 if 1 ~= redis.pcall('renamenx', KEYS[3], KEYS[2]) then
     return false
 end
-return redis.call('sadd', KEYS[1], KEYS[2])
+return redis.call('lpush', KEYS[1], ARGV[1])
 LUA;
     /**
      * KEYS [UNCOMMITED_BATCH_KEY]
@@ -29,14 +30,16 @@ LUA;
 if 1 == redis.call('exists', KEYS[1]) then
     return false
 end
-return redis.call('rpush', KEYS[1], ARGV[1])
+return redis.call('lpush', KEYS[1], ARGV[1])
 LUA;
+    /** @var Redis */
+    private $redis;
     /** @var int */
     private $timeToLive;
     /** @var string */
+    private $batchId;
+    /** @var string */
     private $uncommittedKey;
-    /** @var Redis */
-    private $redis;
     /** @var bool */
     private $committed = false;
     /** @var string */
@@ -44,7 +47,7 @@ LUA;
 
     /**
      * @param Redis $redis
-     * @param int $timeToLive
+     * @param int $timeToLive in seconds
      */
     public function __construct(Redis $redis, $timeToLive) {
         $this->timeToLive = $timeToLive;
@@ -59,7 +62,7 @@ LUA;
             throw new BatchCommitException("Can't commit empty batch.");
         }
         if (false === $this->redis->eval(self::SCRIPT_COMMIT_BATCH, [
-                Key::batchCommittedSet(),
+                Key::batchCommittedList(),
                 $this->committedKey,
                 $this->uncommittedKey
             ])) {
@@ -82,7 +85,7 @@ LUA;
 
         $unassignedJob = new UnassignedJob(BaseJob::fromJobDescriptor($job));
 
-        if ($this->uncommittedKey === null) {
+        if ($this->batchId === null) {
             $this->initialize($unassignedJob);
         } else {
             if (0 === $this->redis->rPushX($this->uncommittedKey, $unassignedJob->toString())) {
@@ -99,16 +102,17 @@ LUA;
      *
      * @return string
      */
-    private function generateKey($sourceId, $jobName) {
-        $this->uncommittedKey = Key::batchUncommitted($sourceId, $jobName, substr(md5(uniqid('', true)), 0, 8));
-        $this->committedKey = Key::batchCommitted($sourceId, $jobName, substr(md5(uniqid('', true)), 0, 8));
+    private function generateKeys($sourceId, $jobName) {
+        $this->batchId = implode(':', [$sourceId, $jobName, substr(md5(uniqid('', true)), 0, 8)]);
+        $this->uncommittedKey = Key::batchUncommitted($this->batchId);
+        $this->committedKey = Key::batchCommitted($this->batchId);
     }
 
     /**
      * @param UnassignedJob $job
      */
     private function initialize(UnassignedJob $job) {
-        $this->generateKey($job->getJob()->getSourceId(), $job->getJob()->getName());
+        $this->generateKeys($job->getJob()->getSourceId(), $job->getJob()->getName());
 
         $result = $this->redis->eval(self::SCRIPT_INITIALIZE_BATCH,
             [$this->uncommittedKey],
