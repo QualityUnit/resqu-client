@@ -62,11 +62,14 @@ LUA;
             throw new BatchCommitException("Can't commit empty batch.");
         }
         if (
-            false === $this->redis->eval(self::SCRIPT_COMMIT_BATCH, [
-                Key::batchCommittedList(),
-                $this->committedKey,
-                $this->uncommittedKey
-            ])
+            false === $this->redis->eval(self::SCRIPT_COMMIT_BATCH,
+                [
+                    Key::batchCommittedList(),
+                    $this->committedKey,
+                    $this->uncommittedKey
+                ], [
+                    $this->batchId
+                ])
         ) {
             throw new BatchCommitException('Batch commit failed.');
         }
@@ -90,7 +93,7 @@ LUA;
         if ($this->batchId === null) {
             $this->initialize($unassignedJob);
         } else {
-            if (0 === $this->redis->rPushX($this->uncommittedKey, $unassignedJob->toString())) {
+            if (0 === $this->redis->lPushX($this->uncommittedKey, $unassignedJob->toString())) {
                 throw new BatchExpiredException('Batch expired.');
             }
         }
