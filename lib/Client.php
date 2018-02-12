@@ -85,37 +85,39 @@ class Client {
      */
     public static function planCreate(\DateTime $startDate, \DateInterval $recurrencePeriod,
         JobDescriptor $job, $providedId = null) {
-        return Planner::insertJob($startDate, $recurrencePeriod, $job, $providedId);
+        return Planner::insertPlan($startDate, $recurrencePeriod, $job, $providedId);
     }
 
     /**
-     * @param string $id
+     * @param string $source
+     * @param string $planId
      *
      * @return null|PlannedJob
      * @throws RedisException
      */
-    public static function planGet($id) {
-        return Planner::getPlannedJob($id);
+    public static function planGet($source, $planId) {
+        return Planner::getPlannedJob($source, $planId);
     }
 
     /**
      * @param string $source
      *
-     * @return null|string[] Return ids of planned jobs per source
+     * @return null|string[] Return planned ids per source
      * @throws RedisException
      */
     public static function planGetIds($source) {
-        return Planner::getPlansIds($source);
+        return Planner::getPlannedIds($source);
     }
 
     /**
-     * @param string $id Plan identifier
+     * @param string $source Source identifier
+     * @param string $planId Plan identifier
      *
      * @return boolean
      * @throws RedisException
      */
-    public static function planRemove($id) {
-        return Planner::removeJob($id);
+    public static function planRemove($source, $planId) {
+        return Planner::removePlan($source, $planId);
     }
 
     /**

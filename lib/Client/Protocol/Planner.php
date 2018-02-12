@@ -38,15 +38,35 @@ redis.call('sadd', KEYS[4], ARGV[3])
 return 1
 LUA;
 
+    /**
+     * @param string $source
+     *
+     * @return null|string[]
+     * @throws RedisException
+     */
+    public static function getPlannedIds($source) {
+        $list = Client::redis()->sMembers(Key::planList($source));
+        for ($i = 0; $i < count($list); $i++) {
+            list($prefix, $id) = explode('_', $list[$i], 2);
+            if ($prefix !== $source || !$id) {
+                throw new \RuntimeException('Bad plan id format');
+            }
+            $list[$i] = $id;
+        }
+
+        return $list;
+    }
 
     /**
-     * @param $planId
+     * @param string $source
+     * @param string $planId
      *
      * @return null|PlannedJob
      * @throws RedisException
      */
-    public static function getPlannedJob($planId) {
-        $data = Client::redis()->get(Key::plan($planId));
+    public static function getPlannedJob($source, $planId) {
+        $id = self::createPlanId($source, $planId);
+        $data = Client::redis()->get(Key::plan($id));
         if (!$data) {
             return null;
         }
@@ -73,16 +93,6 @@ LUA;
     }
 
     /**
-     * @param string $source
-     *
-     * @return null|string[]
-     * @throws RedisException
-     */
-    public static function getPlansIds($source) {
-        return Client::redis()->sMembers(Key::planList($source));
-    }
-
-    /**
      * @param \DateTime $nextRun
      * @param \DateInterval $recurrenceInterval
      * @param JobDescriptor $job
@@ -92,11 +102,9 @@ LUA;
      * @throws PlanExistsException
      * @throws RedisException
      */
-    public static function insertJob(\DateTime $nextRun, \DateInterval $recurrenceInterval,
-        JobDescriptor $job, $providedId = null) {
-
+    public static function insertPlan(\DateTime $nextRun, \DateInterval $recurrenceInterval, JobDescriptor $job, $providedId = null) {
         do {
-            $id = $job->getSourceId() . '_' . ($providedId ?: (string)microtime(true));
+            $id = self::createPlanId($job->getSourceId(), ($providedId ?: (string)microtime(true)));
             $plannedJob = new PlannedJob($id, $nextRun, $recurrenceInterval, BaseJob::fromJobDescriptor($job));
             $plannedJob->moveAfter(time());
 
@@ -113,13 +121,14 @@ LUA;
     }
 
     /**
-     * @param $id
+     * @param string $sourceId
+     * @param string $id
      *
      * @return bool
      * @throws RedisException
      */
-    public static function removeJob($id) {
-        $plannedJob = self::getPlannedJob($id);
+    public static function removePlan($sourceId, $id) {
+        $plannedJob = self::getPlannedJob($sourceId, $id);
         Client::redis()->del(Key::plan($id));
 
         if ($plannedJob == null) {
@@ -180,4 +189,9 @@ LUA;
             [$timestamp]
         );
     }
+
+    private static function createPlanId($sourceId, $id) {
+        return $sourceId . '_' . $id;
+    }
+
 }
