@@ -62,6 +62,15 @@ class Key {
         return self::of('plan', $id);
     }
 
+    /**
+     * @param string $sourceId
+     *
+     * @return string
+     */
+    public static function planList($sourceId) {
+        return self::of('plan_list', $sourceId);
+    }
+
     public static function planSchedule() {
         return self::of('plan_schedule');
     }

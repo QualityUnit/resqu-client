@@ -99,6 +99,16 @@ class Client {
     }
 
     /**
+     * @param string $source
+     *
+     * @return null|string[] Return ids of planned jobs per source
+     * @throws RedisException
+     */
+    public static function planGetIds($source) {
+        return Planner::getPlansIds($source);
+    }
+
+    /**
      * @param string $id Plan identifier
      *
      * @return boolean

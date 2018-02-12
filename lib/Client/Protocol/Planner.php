@@ -24,7 +24,7 @@ if 0==redis.call('llen', KEYS[2]) then
 end
 LUA;
     /**
-     * KEYS [PLAN_KEY, PLAN_SCHEDULE_KEY, PLAN_SCHEDULE_TIMESTAMP_KEY]
+     * KEYS [PLAN_KEY, PLAN_SCHEDULE_KEY, PLAN_SCHEDULE_TIMESTAMP_KEY, PLAN_LIST_KEY]
      * ARGS [PLAN_DATA, NEXT_RUN_TIMESTAMP, PLAN_ID]\
      */
     const INSERT_SCRIPT = /* @lang Lua */
@@ -34,6 +34,7 @@ if 0==redis.call('setnx', KEYS[1], ARGV[1]) then
 end
 redis.call('zadd', KEYS[2], ARGV[2], ARGV[2])
 redis.call('rpush', KEYS[3], ARGV[3])
+redis.call('sadd', KEYS[4], ARGV[3])
 return 1
 LUA;
 
@@ -72,6 +73,16 @@ LUA;
     }
 
     /**
+     * @param string $source
+     *
+     * @return null|string[]
+     * @throws RedisException
+     */
+    public static function getPlansIds($source) {
+        return Client::redis()->sMembers(Key::planList($source));
+    }
+
+    /**
      * @param \DateTime $nextRun
      * @param \DateInterval $recurrenceInterval
      * @param JobDescriptor $job
@@ -85,7 +96,7 @@ LUA;
         JobDescriptor $job, $providedId = null) {
 
         do {
-            $id = $providedId ?: (string)microtime(true);
+            $id = $job->getSourceId() . '_' . ($providedId ?: (string)microtime(true));
             $plannedJob = new PlannedJob($id, $nextRun, $recurrenceInterval, BaseJob::fromJobDescriptor($job));
             $plannedJob->moveAfter(time());
 
@@ -117,6 +128,7 @@ LUA;
 
         $timestamp = $plannedJob->getNextRunTimestamp();
         Client::redis()->lRem(Key::planTimestamp($timestamp), 0, $id);
+        Client::redis()->sRem(Key::planList($plannedJob->getJob()->getSourceId()), $id);
 
         self::cleanupTimestamp($timestamp);
 
@@ -138,7 +150,8 @@ LUA;
             [
                 Key::plan($id),
                 Key::planSchedule(),
-                Key::planTimestamp($nextRunTimestamp)
+                Key::planTimestamp($nextRunTimestamp),
+                Key::planList($plannedJob->getJob()->getSourceId())
             ],
             [
                 $plannedJob->toString(),
