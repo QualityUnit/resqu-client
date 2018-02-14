@@ -41,7 +41,7 @@ LUA;
     /**
      * @param string $source
      *
-     * @return null|string[]
+     * @return string[]
      * @throws RedisException
      */
     public static function getPlannedIds($source) {

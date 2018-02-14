@@ -102,7 +102,7 @@ class Client {
     /**
      * @param string $source
      *
-     * @return null|string[] Return planned ids per source
+     * @return string[] Return planned ids per source
      * @throws RedisException
      */
     public static function planGetIds($source) {
