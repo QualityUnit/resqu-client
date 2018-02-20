@@ -47,10 +47,8 @@ LUA;
     public static function getPlannedIds($source) {
         $list = Client::redis()->sMembers(Key::planList($source));
         for ($i = 0; $i < count($list); $i++) {
-            list($prefix, $id) = explode('_', $list[$i], 2);
-            if ($prefix !== $source || !$id) {
-                throw new \RuntimeException('Bad plan id format');
-            }
+            $id = self::getPlanId($source, $list[$i]);
+
             $list[$i] = $id;
         }
 
@@ -117,7 +115,7 @@ LUA;
             }
         } while (true);
 
-        return $id;
+        return self::getPlanId($job->getSourceId(), $id);
     }
 
     /**
@@ -192,6 +190,21 @@ LUA;
 
     private static function createPlanId($sourceId, $id) {
         return $sourceId . '_' . $id;
+    }
+
+    /**
+     * @param string $source
+     * @param string $id
+     *
+     * @return string
+     */
+    private static function getPlanId($source, $id) {
+        list($prefix, $planId) = explode('_', $id, 2);
+        if ($prefix !== $source || !$planId) {
+            throw new \RuntimeException('Bad plan id format');
+        }
+
+        return $planId;
     }
 
 }
