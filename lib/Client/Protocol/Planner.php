@@ -127,15 +127,16 @@ LUA;
      */
     public static function removePlan($sourceId, $id) {
         $plannedJob = self::getPlannedJob($sourceId, $id);
-        Client::redis()->del(Key::plan($id));
-
         if ($plannedJob == null) {
             return false;
         }
 
+        $planId = $plannedJob->getId();
         $timestamp = $plannedJob->getNextRunTimestamp();
-        Client::redis()->lRem(Key::planTimestamp($timestamp), 0, $id);
-        Client::redis()->sRem(Key::planList($plannedJob->getJob()->getSourceId()), $id);
+
+        Client::redis()->del(Key::plan($planId));
+        Client::redis()->lRem(Key::planTimestamp($timestamp), 0, $planId);
+        Client::redis()->sRem(Key::planList($plannedJob->getJob()->getSourceId()), $planId);
 
         self::cleanupTimestamp($timestamp);
 
