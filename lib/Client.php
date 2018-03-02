@@ -39,6 +39,16 @@ class Client {
     }
 
     /**
+     * @param string $batchId
+     *
+     * @return null|Batch
+     * @throws RedisException
+     */
+    public static function loadBatch($batchId) {
+        return Batch::load(self::redis(), $batchId);
+    }
+
+    /**
      * @param JobDescriptor $job
      *
      * @return string Job ID when the job was created

@@ -47,6 +47,24 @@ LUA;
 
     /**
      * @param Redis $redis
+     * @param string $batchId
+     * @return null|Batch
+     */
+    public static function load(Redis $redis, $batchId) {
+        $batch = new self($redis, 0);
+        $batch->batchId = $batchId;
+        $batch->committed = true;
+        $batch->generateKeys();
+
+        if ($redis->exists($batch->committedKey)) {
+            return $batch;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param Redis $redis
      * @param int $timeToLive in seconds
      */
     public function __construct(Redis $redis, $timeToLive) {
@@ -55,6 +73,25 @@ LUA;
     }
 
     /**
+     * @return bool
+     */
+    public function isCommitted() {
+        return $this->committed;
+    }
+
+    /**
+     * @return int
+     */
+    public function getLength() {
+        if ($this->isCommitted()) {
+            return $this->redis->lLen($this->committedKey);
+        }
+
+        return $this->redis->lLen($this->uncommittedKey);
+    }
+
+    /**
+     * @return string batch identifier
      * @throws BatchCommitException
      */
     public function commit() {
@@ -75,6 +112,8 @@ LUA;
         }
 
         $this->committed = true;
+
+        return $this->batchId;
     }
 
     /**
@@ -104,11 +143,12 @@ LUA;
     /**
      * @param string $sourceId
      * @param string $jobName
-     *
-     * @return string
      */
-    private function generateKeys($sourceId, $jobName) {
+    private function generateId($sourceId, $jobName) {
         $this->batchId = implode(':', [$sourceId, $jobName, substr(md5(uniqid('', true)), 0, 8)]);
+    }
+
+    private function generateKeys() {
         $this->uncommittedKey = Key::batchUncommitted($this->batchId);
         $this->committedKey = Key::batchCommitted($this->batchId);
     }
@@ -117,7 +157,8 @@ LUA;
      * @param UnassignedJob $job
      */
     private function initialize(UnassignedJob $job) {
-        $this->generateKeys($job->getJob()->getSourceId(), $job->getJob()->getName());
+        $this->generateId($job->getJob()->getSourceId(), $job->getJob()->getName());
+        $this->generateKeys();
 
         $result = $this->redis->eval(self::SCRIPT_INITIALIZE_BATCH,
             [$this->uncommittedKey],
