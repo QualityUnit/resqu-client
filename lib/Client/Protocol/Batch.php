@@ -19,6 +19,7 @@ class Batch {
 if 1 ~= redis.pcall('renamenx', KEYS[3], KEYS[2]) then
     return false
 end
+redis.call('persist', KEYS[2])
 return redis.call('lpush', KEYS[1], ARGV[1])
 LUA;
     /**
