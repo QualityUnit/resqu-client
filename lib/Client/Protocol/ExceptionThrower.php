@@ -12,8 +12,8 @@ class ExceptionThrower {
      *
      * @throws \RuntimeException
      */
-    public function reschedule($delay = 0, array $args = []) {
-        $data = json_encode(['delay' => $delay, 'args' => $args]);
+    public function reschedule($delay = 0) {
+        $data = json_encode(['delay' => $delay]);
 
         throw new \RuntimeException($data, self::CODE_RESCHEDULE);
     }
