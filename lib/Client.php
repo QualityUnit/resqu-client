@@ -4,10 +4,8 @@
 namespace Resqu;
 
 use Exception;
-use Resqu\Client\Exception\DeferredException;
 use Resqu\Client\Exception\PlanExistsException;
 use Resqu\Client\Exception\RedisException;
-use Resqu\Client\Exception\UniqueException;
 use Resqu\Client\JobDescriptor;
 use Resqu\Client\Protocol\BaseJob;
 use Resqu\Client\Protocol\Batch;
@@ -16,7 +14,6 @@ use Resqu\Client\Protocol\Key;
 use Resqu\Client\Protocol\PlannedJob;
 use Resqu\Client\Protocol\Planner;
 use Resqu\Client\Protocol\UnassignedJob;
-use Resqu\Client\Protocol\UniqueList;
 use Resqu\Client\Redis;
 
 class Client {
@@ -52,14 +49,10 @@ class Client {
      * @param JobDescriptor $job
      *
      * @return string Job ID when the job was created
-     * @throws DeferredException
-     * @throws UniqueException
      * @throws RedisException
      */
     public static function enqueue(JobDescriptor $job) {
-        $baseJob = BaseJob::fromJobDescriptor($job);
-        UniqueList::add($baseJob);
-        $unassignedJob = new UnassignedJob($baseJob);
+        $unassignedJob = new UnassignedJob(BaseJob::fromJobDescriptor($job));
 
         self::redis()->lPush(Key::unassignedQueue(), $unassignedJob->toString());
 
@@ -70,13 +63,10 @@ class Client {
      * @param int $delay Number of seconds from now when the job should be executed.
      * @param JobDescriptor $job
      *
-     * @throws DeferredException
-     * @throws UniqueException
      * @throws RedisException
      */
     public static function enqueueDelayed($delay, JobDescriptor $job) {
         $baseJob = BaseJob::fromJobDescriptor($job);
-        UniqueList::add($baseJob);
 
         $enqueueAt = time() + $delay;
         self::redis()->rPush(Key::delayed($enqueueAt), $baseJob->toString());
