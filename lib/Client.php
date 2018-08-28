@@ -18,7 +18,7 @@ use Resqu\Client\Redis;
 
 class Client {
 
-    const PROTOCOL_VERSION = 'resqu-v4';
+    const PROTOCOL_VERSION = 'resqu-v5';
 
     /** @var string */
     private static $redisServer;
