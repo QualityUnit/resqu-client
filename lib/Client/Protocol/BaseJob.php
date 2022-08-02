@@ -38,8 +38,17 @@ class BaseJob {
         }
 
         $job = new self();
+
+        $args = $job->args;
+        if (isset($array['args'])) {
+            if (!is_array($array['args'])) {
+                throw new \InvalidArgumentException('Job \'args\' parameter must be an array.');
+            }
+            $args = $array['args'];
+        }
+
         $job->class = isset($array['class']) ? $array['class'] : $job->class;
-        $job->args = isset($array['args']) ? $array['args'] : $job->args;
+        $job->args =  $args;
         $job->sourceId = isset($array['sourceId']) ? $array['sourceId'] : $job->sourceId;
         $job->name = isset($array['name']) ? $array['name'] : $job->name;
         $job->includePath = isset($array['includePath']) ? $array['includePath'] : $job->includePath;
